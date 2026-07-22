@@ -132,6 +132,7 @@ class EvaluationConfig:
     primary_adapter_scale: float = 1.0
     scale_sweep: list[float] = field(default_factory=lambda: [0.6, 0.8, 1.0])
     compare_base_model: bool = True
+    include_base_in_checkpoint_grid: bool = True
     run_checkpoint_sweep: bool = True
     run_scale_sweep: bool = True
 

@@ -36,9 +36,11 @@ The dataset cell must visibly define `TRIGGER_WORD`, upload exactly one ZIP file
 
 The training cell must visibly define the run name and important training parameters, preview the resolved training configuration, run an optional smoke test, start or resume production training, display status, and display checkpoint inventory.
 
-The evaluation cell must visibly define prompts, seeds, inference settings, checkpoint sweep settings, and LoRA scale settings. It must prepare inference assets, run base-versus-LoRA comparison, checkpoint sweep, scale sweep, display outputs, package exports, and optionally download them.
+The evaluation cell must visibly define prompts, seeds, inference settings, checkpoint sweep settings, and LoRA scale settings. It must prepare inference assets, run base-versus-LoRA comparison, checkpoint sweep, scale sweep, display outputs, package a portable evaluation bundle, and optionally download it.
 
-The trigger word must originate in the dataset cell, persist in manifests, and be reused by training and evaluation without a second independent definition.
+There is also a separate evaluation-only notebook, `notebooks/krea2_character_lora_evaluation_colab.ipynb`, built from `notebooks/evaluation_cells`, with exactly three executable code cells: setup, upload and import evaluation bundle, and evaluation and export. It calls `pipeline.import_evaluation_bundle(zip_path=...)` to import the portable ZIP produced by the main notebook, derives the trigger word from the imported run, downloads only public evaluation assets, and can export a new re-importable bundle. It uses no Hugging Face token and no training-asset download. Both notebooks are generated and checked by `scripts/build_notebook.py`.
+
+The trigger word must originate in the dataset cell, persist in manifests, and be reused by training and evaluation without a second independent definition. In the evaluation-only notebook the trigger word originates from the imported run.
 
 Notebook comments are allowed only as section separators. Python package code, scripts, and tests must contain no comment tokens.
 

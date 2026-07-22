@@ -4,14 +4,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
-from . import assets, environment, evaluation, training
+from . import assets, bundle, environment, evaluation, training
 from . import dataset as dataset_module
 from .configuration import DatasetConfig, EvaluationConfig, TrainingConfig
 from .constants import AI_TOOLKIT_REVISION
 from .errors import AssetError
 from .manifests import read_json, write_json_atomic
 from .paths import ProjectPaths
-from .types import DatasetResult, EvaluationReport, SetupReport, TrainingRun
+from .types import DatasetResult, EvaluationReport, ImportedRun, SetupReport, TrainingRun
 
 
 class CharacterLoraPipeline:
@@ -130,6 +130,9 @@ class CharacterLoraPipeline:
 
     def load_run(self, run_name: str) -> TrainingRun:
         return training.load_run(self.paths, run_name)
+
+    def import_evaluation_bundle(self, zip_path: str | Path) -> ImportedRun:
+        return bundle.import_evaluation_bundle(self.paths.root, zip_path)
 
     def prepare_evaluation_assets(self) -> SetupReport:
         inference_manifest = assets.prepare_inference_assets(self.paths)

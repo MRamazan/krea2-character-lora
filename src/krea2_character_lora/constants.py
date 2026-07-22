@@ -38,6 +38,15 @@ ACCEPTED_IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg")
 KNOWN_UNSUPPORTED_IMAGE_EXTENSIONS = (".webp", ".bmp", ".tif", ".tiff", ".gif")
 CAPTION_EXTENSION = ".txt"
 
+BUNDLE_TYPE = "krea2_character_lora_evaluation_bundle"
+BUNDLE_FORMAT_VERSION = 1
+BUNDLE_MANIFEST_NAME = "bundle_manifest.json"
+MAX_BUNDLE_FILES = 5000
+MAX_BUNDLE_UNCOMPRESSED_BYTES = 8 * 1024**3
+MAX_LORA_FILE_BYTES = 1024**3
+PACKAGE_DISTRIBUTION = "krea2-character-lora"
+FALLBACK_PACKAGE_VERSION = "0.1.0"
+
 
 @dataclass(frozen=True, slots=True)
 class RepositoryAsset:

@@ -2,14 +2,46 @@
 
 This repository turns the reference Krea 2 LoRA notebook into a character-only Python package with a compact Google Colab interface.
 
-The Colab notebook has exactly four executable cells:
+## Two workflows
+
+There are two Colab notebooks that share one package and one public API.
+
+**Training workflow — `notebooks/krea2_character_lora_colab.ipynb` (four cells):**
+
+```text
+Main notebook
+→ train character LoRA
+→ evaluate
+→ create a portable evaluation ZIP
+```
 
 1. Setup
 2. Dataset preparation and visualization
 3. Training
 4. Evaluation and export
 
-The implementation remains in the package. User decisions remain visible in the notebook.
+**Evaluation-only workflow — `notebooks/krea2_character_lora_evaluation_colab.ipynb` (three cells):**
+
+```text
+Evaluation notebook
+→ upload the portable ZIP
+→ validate and import the LoRA
+→ download public evaluation assets
+→ run base / checkpoint / scale evaluation
+→ optionally export a new portable ZIP
+```
+
+1. Setup
+2. Upload and import evaluation bundle
+3. Evaluation and export
+
+The implementation remains in the package. User decisions remain visible in the notebooks.
+
+## Portable evaluation bundle
+
+`evaluation.export(...)` produces a single self-contained ZIP that is directly uploadable into the evaluation-only notebook through `pipeline.import_evaluation_bundle(zip_path=...)`. The returned object is accepted by `pipeline.evaluate(run=..., config=...)` exactly like a `TrainingRun`. The bundle carries the selected LoRA (and optionally all checkpoints), normalized manifests, provenance, capabilities, and a per-file SHA-256 index. It never contains base model, text-encoder, or VAE weights, dataset images, secrets, or absolute operational paths. See [docs/EVALUATION_BUNDLE.md](docs/EVALUATION_BUNDLE.md) for the schema and validation rules.
+
+Bundles exported with `include_all_checkpoints=True` support the full checkpoint sweep. Selected-checkpoint-only bundles still support base comparison and scale sweep; a requested checkpoint sweep evaluates the single selected checkpoint with a clear notice.
 
 ## Character-only scope
 

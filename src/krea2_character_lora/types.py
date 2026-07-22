@@ -139,13 +139,71 @@ class TrainingRun:
             )
 
 
+@dataclass
+class ImportedRun(TrainingRun):
+    bundle_source_path: Path | None = None
+    extraction_directory: Path | None = None
+    capabilities: dict[str, Any] = field(default_factory=dict)
+    bundle_format_version: int = 0
+    provenance: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def supports_checkpoint_sweep(self) -> bool:
+        return bool(self.capabilities.get("checkpoint_sweep"))
+
+    @property
+    def selected_checkpoint_step(self) -> int | None:
+        return self.details.get("active_checkpoint", {}).get("checkpoint_step")
+
+    @property
+    def available_checkpoint_steps(self) -> list[int]:
+        return list(self.details.get("checkpoint_inventory", {}).get("checkpoint_steps", []))
+
+    @property
+    def lora_rank(self) -> int | None:
+        return self.details.get("lora_rank")
+
+    @property
+    def lora_alpha(self) -> int | None:
+        return self.details.get("lora_alpha")
+
+    def display_summary(self) -> None:
+        active = self.details.get("active_checkpoint", {})
+        training_model = self.provenance.get("training_model", {})
+        vae = self.provenance.get("vae", {})
+        print(f"Run: {self.run_name}")
+        print(f"Trigger word: {self.trigger_word}")
+        print(f"Selected checkpoint step: {self.selected_checkpoint_step}")
+        print(f"Available checkpoint steps: {self.available_checkpoint_steps}")
+        print(f"LoRA rank/alpha: {self.lora_rank}/{self.lora_alpha}")
+        print(f"Bundle format version: {self.bundle_format_version}")
+        print(
+            f"Training model: {training_model.get('repository')} @ {training_model.get('revision')}"
+        )
+        print(f"Custom VAE: {vae.get('repository')} @ {vae.get('revision')}")
+        print(f"Selected LoRA path: {active.get('checkpoint_path')}")
+        print(f"Selected LoRA SHA-256: {self.provenance.get('selected_lora_sha256')}")
+        print(f"Checkpoint sweep supported: {self.supports_checkpoint_sweep}")
+        print(f"Prior evaluation included: {self.capabilities.get('previous_evaluation')}")
+        print(f"Extraction directory: {self.extraction_directory}")
+
+
 @dataclass(slots=True)
 class ExportBundle:
     archives: list[Path]
     details: dict[str, Any] = field(default_factory=dict)
 
     def display(self) -> None:
-        print(f"Export directory: {self.details.get('export_directory')}")
+        bundle_path = self.details.get("bundle_path") or self.details.get("export_directory")
+        print(f"Evaluation bundle: {bundle_path}")
+        capabilities = self.details.get("capabilities")
+        if capabilities:
+            print(f"Capabilities: {capabilities}")
+        if self.details.get("available_checkpoint_steps") is not None:
+            print(f"Available checkpoint steps: {self.details.get('available_checkpoint_steps')}")
+        unavailable = self.details.get("unavailable_categories")
+        if unavailable:
+            print(f"Unavailable requested categories: {unavailable}")
         for record in self.details.get("packages", []):
             print(f"{record['filename']}  {record['size_bytes']} bytes  {record['sha256'][:16]}")
 

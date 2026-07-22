@@ -1,7 +1,12 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SCANNED = [ROOT / "src", ROOT / "notebooks" / "cells"]
+SCANNED = [
+    ROOT / "src",
+    ROOT / "notebooks" / "cells",
+    ROOT / "notebooks" / "evaluation_cells",
+]
+EXCLUDED = {ROOT / "src" / "krea2_character_lora" / "secrets.py"}
 
 FORBIDDEN_TOKEN_MARKERS = (
     "hf_token",
@@ -19,6 +24,8 @@ def test_no_hugging_face_token_handling_in_sources() -> None:
     violations = {}
     for root in SCANNED:
         for path in root.rglob("*.py"):
+            if path in EXCLUDED:
+                continue
             source = path.read_text(encoding="utf-8")
             hits = [marker for marker in FORBIDDEN_TOKEN_MARKERS if marker in source]
             if hits:

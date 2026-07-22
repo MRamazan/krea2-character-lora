@@ -13,6 +13,7 @@ assets = json.loads(Path(request["inference_asset_manifest"]).read_text(encoding
 checkpoints = request["sweep_checkpoints"]
 if not checkpoints:
     raise RuntimeError("The checkpoint sweep received no checkpoints.")
+include_base = bool(request.get("include_base_in_checkpoint_grid"))
 output_directory = Path(request["output_root"]) / "checkpoint_sweep"
 output_directory.mkdir(parents=True, exist_ok=True)
 
@@ -32,22 +33,12 @@ model, transformer, controller, records = load_runtime(
 )
 primary_record = records[0]
 active_scales = {request["adapter_name"]: request["primary_adapter_scale"]}
-controller.set_scales(active_scales)
-image_records = []
-paths_by_case = {index: [] for index in range(len(request["prompts"]))}
-for checkpoint in checkpoints:
-    state_dict = load_file(checkpoint["path"])
-    state_dict = model.convert_lora_weights_before_load(state_dict)
-    primary_record["network"].load_weights(state_dict)
-    controller.set_scales(active_scales)
-    configurations = []
-    expected = []
-    for case_index, prompt in enumerate(request["prompts"]):
-        seed = int(request["seeds"][case_index % len(request["seeds"])])
-        output_path = (
-            output_directory / f"case_{case_index + 1:02d}_step_{int(checkpoint['step']):08d}.png"
-        )
-        configurations.append(
+base_scales = {request["adapter_name"]: 0.0}
+
+
+def generate(prompt, seed, output_path):
+    model.generate_images(
+        [
             GenerateImageConfig(
                 prompt=prompt,
                 width=int(request["width"]),
@@ -61,12 +52,46 @@ for checkpoint in checkpoints:
                 output_ext="png",
                 add_prompt_file=False,
             )
+        ]
+    )
+    if not output_path.is_file():
+        raise RuntimeError(f"Expected sweep image is missing: {output_path}")
+
+
+image_records = []
+base_by_case = {}
+if include_base:
+    controller.set_scales(base_scales)
+    for case_index, prompt in enumerate(request["prompts"]):
+        seed = int(request["seeds"][case_index % len(request["seeds"])])
+        base_path = output_directory / f"case_{case_index + 1:02d}_base.png"
+        generate(prompt, seed, base_path)
+        base_by_case[case_index] = {"step": None, "label": "Base", "path": str(base_path)}
+        image_records.append(
+            {
+                "case_index": case_index + 1,
+                "checkpoint_step": None,
+                "checkpoint_path": None,
+                "prompt": prompt,
+                "seed": seed,
+                "path": str(base_path),
+                "sha256": sha256_file(base_path),
+            }
         )
-        expected.append((case_index, prompt, seed, output_path))
-    model.generate_images(configurations)
-    for case_index, prompt, seed, output_path in expected:
-        if not output_path.is_file():
-            raise RuntimeError(f"Expected sweep image is missing: {output_path}")
+
+controller.set_scales(active_scales)
+paths_by_case = {index: [] for index in range(len(request["prompts"]))}
+for checkpoint in checkpoints:
+    state_dict = load_file(checkpoint["path"])
+    state_dict = model.convert_lora_weights_before_load(state_dict)
+    primary_record["network"].load_weights(state_dict)
+    controller.set_scales(active_scales)
+    for case_index, prompt in enumerate(request["prompts"]):
+        seed = int(request["seeds"][case_index % len(request["seeds"])])
+        output_path = (
+            output_directory / f"case_{case_index + 1:02d}_step_{int(checkpoint['step']):08d}.png"
+        )
+        generate(prompt, seed, output_path)
         image_records.append(
             {
                 "case_index": case_index + 1,
@@ -79,7 +104,11 @@ for checkpoint in checkpoints:
             }
         )
         paths_by_case[case_index].append(
-            {"step": int(checkpoint["step"]), "path": str(output_path)}
+            {
+                "step": int(checkpoint["step"]),
+                "label": f"Step {int(checkpoint['step'])}",
+                "path": str(output_path),
+            }
         )
     gc.collect()
 thumbnail = 384
@@ -88,6 +117,8 @@ grid_paths = []
 master_rows = []
 for case_index in range(len(request["prompts"])):
     items = sorted(paths_by_case[case_index], key=lambda item: item["step"])
+    if include_base and case_index in base_by_case:
+        items = [base_by_case[case_index], *items]
     grid = Image.new("RGB", (thumbnail * len(items), thumbnail + label_height), "white")
     draw = ImageDraw.Draw(grid)
     for column, item in enumerate(items):
@@ -97,7 +128,7 @@ for case_index in range(len(request["prompts"])):
             .resize((thumbnail, thumbnail), Image.Resampling.LANCZOS)
         )
         grid.paste(image, (column * thumbnail, label_height))
-        draw.text((column * thumbnail + 12, 16), f"Step {item['step']}", fill="black")
+        draw.text((column * thumbnail + 12, 16), item["label"], fill="black")
     grid_path = output_directory / f"case_{case_index + 1:02d}_checkpoint_grid.png"
     grid.save(grid_path)
     grid_paths.append(str(grid_path))
@@ -116,6 +147,7 @@ metadata = {
     "prompt_count": len(request["prompts"]),
     "image_count": len(image_records),
     "character_scale": request["primary_adapter_scale"],
+    "base_included_in_grid": include_base,
     "records": image_records,
     "per_prompt_grids": grid_paths,
     "master_grid": str(master_path),

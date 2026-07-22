@@ -1,6 +1,6 @@
 import inspect
 
-from krea2_character_lora import CharacterLoraPipeline
+from krea2_character_lora import CharacterLoraPipeline, ImportedRun, TrainingRun
 
 
 def test_pipeline_has_required_public_operations() -> None:
@@ -13,8 +13,19 @@ def test_pipeline_has_required_public_operations() -> None:
         "load_run",
         "prepare_evaluation_assets",
         "evaluate",
+        "import_evaluation_bundle",
     }
     assert required <= set(dir(CharacterLoraPipeline))
+
+
+def test_import_evaluation_bundle_takes_single_zip_path() -> None:
+    signature = inspect.signature(CharacterLoraPipeline.import_evaluation_bundle)
+    parameters = [name for name in signature.parameters if name != "self"]
+    assert parameters == ["zip_path"]
+
+
+def test_imported_run_is_a_training_run() -> None:
+    assert issubclass(ImportedRun, TrainingRun)
 
 
 def test_pipeline_constructor_has_no_concept_selector() -> None:

@@ -4,18 +4,20 @@
 
 from krea2_character_lora import EvaluationConfig
 
+TRIGGER_WORD = imported_run.trigger_word
+
 PROMPTS = [
-    f"{training_run.trigger_word} is a woman in a fully clothed professional studio portrait, "
+    f"{TRIGGER_WORD} is a woman in a fully clothed professional studio portrait, "
     "wearing a tailored blazer, soft key lighting, sharp facial detail",
-    f"{training_run.trigger_word} is a woman standing outdoors in natural daylight, "
+    f"{TRIGGER_WORD} is a woman standing outdoors in natural daylight, "
     "wearing a casual jacket and jeans, fully clothed, relaxed pose",
-    f"{training_run.trigger_word} is a woman taking a mirror selfie in a modern room, "
+    f"{TRIGGER_WORD} is a woman taking a mirror selfie in a modern room, "
     "holding a phone, wearing a fully clothed everyday outfit",
-    f"{training_run.trigger_word} is a woman seated and taking a mirror selfie, "
+    f"{TRIGGER_WORD} is a woman seated and taking a mirror selfie, "
     "wearing a long-sleeve top and trousers, natural indoor lighting",
-    f"{training_run.trigger_word} is a woman taking an indoor selfie near a window, "
+    f"{TRIGGER_WORD} is a woman taking an indoor selfie near a window, "
     "wearing a knitted sweater, warm ambient light, clear facial features",
-    f"{training_run.trigger_word} is a woman in a lifestyle photograph at a cafe, "
+    f"{TRIGGER_WORD} is a woman in a lifestyle photograph at a cafe, "
     "wearing a coat and scarf, fully clothed, candid expression",
 ]
 SEEDS = [42, 12345, 987654321]
@@ -58,7 +60,7 @@ evaluation_config = EvaluationConfig(
 pipeline.prepare_evaluation_assets()
 
 evaluation = pipeline.evaluate(
-    run=training_run,
+    run=imported_run,
     config=evaluation_config,
 )
 

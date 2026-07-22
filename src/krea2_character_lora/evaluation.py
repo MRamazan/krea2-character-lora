@@ -14,25 +14,28 @@ from .errors import EnvironmentPreparationError, EvaluationError
 from .manifests import read_json, write_json_atomic
 from .paths import ProjectPaths
 from .runtime import evaluation_script_path
-from .types import EvaluationReport, TrainingRun
+from .types import EvaluationReport, ImportedRun, TrainingRun
 
 _RESULT_MARKER = "__KREA2_RESULT__"
+
+EvaluatableRun = TrainingRun | ImportedRun
 
 
 def build_evaluation_request(
     paths: ProjectPaths,
-    run: TrainingRun,
+    run: EvaluatableRun,
     config: EvaluationConfig,
     selection: dict[str, Any],
     sweep_checkpoints: list[dict[str, Any]],
 ) -> dict[str, Any]:
     training_config = run.details.get("training_config", {})
+    lora_alpha = training_config.get("lora_alpha") or run.details.get("lora_alpha") or 32
     return {
         "run_name": run.run_name,
         "inference_asset_manifest": str(paths.inference_asset_manifest),
         "active_checkpoint": selection,
         "adapter_name": PRIMARY_ADAPTER_NAME,
-        "lora_alpha": training_config.get("lora_alpha", 32),
+        "lora_alpha": lora_alpha,
         "training_dtype": training_config.get("training_dtype", "bf16"),
         "max_text_length": MAX_TEXT_LENGTH,
         "prompts": list(config.prompts),
@@ -44,6 +47,7 @@ def build_evaluation_request(
         "negative_prompt": config.negative_prompt,
         "primary_adapter_scale": config.primary_adapter_scale,
         "scale_sweep": list(config.scale_sweep),
+        "include_base_in_checkpoint_grid": config.include_base_in_checkpoint_grid,
         "sweep_checkpoints": [
             {"step": record["step"], "path": record["path"]} for record in sweep_checkpoints
         ],
@@ -85,7 +89,9 @@ def run_evaluation_script(
     return json.loads(structured[0].removeprefix(_RESULT_MARKER))
 
 
-def evaluate(paths: ProjectPaths, run: TrainingRun, config: EvaluationConfig) -> EvaluationReport:
+def evaluate(
+    paths: ProjectPaths, run: EvaluatableRun, config: EvaluationConfig
+) -> EvaluationReport:
     config.validate()
     if not paths.inference_asset_manifest.is_file():
         raise EvaluationError(
@@ -113,6 +119,7 @@ def evaluate(paths: ProjectPaths, run: TrainingRun, config: EvaluationConfig) ->
     request_path = run_directory / "evaluation_request.json"
     write_json_atomic(request_path, request)
 
+    single_checkpoint_sweep = len(sweep_checkpoints) <= 1
     manifest: dict[str, Any] = {
         "run_name": run.run_name,
         "recorded_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -129,6 +136,8 @@ def evaluate(paths: ProjectPaths, run: TrainingRun, config: EvaluationConfig) ->
         "checkpoint_mode": config.checkpoint_mode,
         "sweep_checkpoint_steps": [record["step"] for record in sweep_checkpoints],
         "scale_sweep": list(config.scale_sweep),
+        "include_base_in_checkpoint_grid": config.include_base_in_checkpoint_grid,
+        "single_checkpoint_sweep": single_checkpoint_sweep,
         "automatic_selection": False,
         "permanent_merge_performed": False,
     }
@@ -137,6 +146,13 @@ def evaluate(paths: ProjectPaths, run: TrainingRun, config: EvaluationConfig) ->
             paths, "base", request_path, f"{run.run_name}_base_comparison.log"
         )
     if config.run_checkpoint_sweep:
+        if single_checkpoint_sweep:
+            notice = (
+                "Only the selected checkpoint is available in this run, so the checkpoint sweep "
+                "evaluates that single checkpoint."
+            )
+            manifest["checkpoint_sweep_notice"] = notice
+            print(notice)
         manifest["checkpoint_sweep"] = run_evaluation_script(
             paths, "checkpoint_sweep", request_path, f"{run.run_name}_checkpoint_sweep.log"
         )

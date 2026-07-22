@@ -36,3 +36,19 @@ class EvaluationError(Krea2CharacterLoraError):
 
 class ExportError(Krea2CharacterLoraError):
     pass
+
+
+class BundleValidationError(Krea2CharacterLoraError):
+    pass
+
+
+class BundleImportError(Krea2CharacterLoraError):
+    pass
+
+
+class UnsupportedBundleVersionError(BundleValidationError):
+    pass
+
+
+class BundleIntegrityError(BundleValidationError):
+    pass

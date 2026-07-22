@@ -52,17 +52,21 @@
 - Never choose the best checkpoint automatically.
 - Allow explicit manual checkpoint selection after visual review.
 
-### Export
+### Export and bundle
 
-- Export selected LoRA weights, optional checkpoints, images, logs, manifests, resolved revisions, hashes, and package freeze information.
-- Package the actual current session state.
-- Never include base model weights, the custom VAE weights, or any secret-like field.
+- Produce a single portable evaluation bundle ZIP through the existing `evaluation.export(...)` call.
+- Include the selected LoRA, optional checkpoints, normalized manifests, provenance, capabilities, and a per-file SHA-256 index using relative POSIX paths.
+- Never include base model, text encoder, or VAE weights, dataset images, secrets, or absolute operational paths.
+- Detect secret fields by normalized exact name and sensitive suffix, never by substring, so `keep_tokens` and similar fields export successfully.
+- Import a bundle through `pipeline.import_evaluation_bundle(zip_path=...)` into an isolated directory with strict validation, returning an `ImportedRun` accepted by `evaluate`.
+- Reconstruct the checkpoint inventory from validated bundle paths relative to the extraction root, never from absolute source paths.
+- Re-exports from the evaluation-only notebook use the same format and remain re-importable without nesting the original ZIP.
 
 ## Non-functional requirements
 
 - All project language is English.
 - There is no Google Drive integration.
-- The notebook has exactly four executable code cells.
+- The training notebook has exactly four executable code cells and the evaluation-only notebook has exactly three.
 - Package code, scripts, and tests contain no comment tokens.
 - Notebook comments only separate sections.
 - Public errors are actionable and specific.

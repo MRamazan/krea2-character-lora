@@ -49,7 +49,32 @@ The user edits:
 - Scale sweep values
 - Export and download options
 
-The cell prepares Krea 2 Turbo, evaluates the run, displays all comparison grids, packages exports, and optionally downloads archives.
+The cell prepares Krea 2 Turbo, evaluates the run, displays all comparison grids, packages a portable evaluation bundle, and optionally downloads it.
+
+## Evaluation-only notebook
+
+`notebooks/krea2_character_lora_evaluation_colab.ipynb` has exactly three cells.
+
+### Cell 1: Setup
+
+Installs the package from an explicit revision, initializes `CharacterLoraPipeline`, and
+verifies the isolated runtime. It does not download training assets and uses no Hugging
+Face token. Krea 2 Turbo, the text encoder, and the VAE are prepared in cell three.
+
+### Cell 2: Upload and import evaluation bundle
+
+Uploads exactly one portable ZIP and calls `pipeline.import_evaluation_bundle(zip_path=...)`.
+`imported_run.display_summary()` shows the run name, trigger word, selected checkpoint
+step, available checkpoint steps, LoRA rank and alpha, bundle format version, training
+model and custom VAE provenance, the selected LoRA path and SHA-256, checkpoint-sweep
+support, and the extraction directory.
+
+### Cell 3: Evaluation and export
+
+Sets `TRIGGER_WORD = imported_run.trigger_word`, exposes prompts, seeds, dimensions,
+inference settings, checkpoint mode, scale sweep, base comparison and base-in-grid
+options, and export options. It prepares evaluation assets anonymously, evaluates the
+imported run, shows the grids, and can export a new re-importable portable bundle.
 
 ## Revision policy
 

@@ -87,3 +87,87 @@ def make_vae_safetensors():
 @pytest.fixture
 def solid_image_writer():
     return _write_solid_image
+
+
+@pytest.fixture
+def prepared_run(tmp_path, make_lora_checkpoint):
+    from krea2_character_lora.checkpoints import inventory_from_directory, select_active
+    from krea2_character_lora.manifests import write_json_atomic
+    from krea2_character_lora.paths import ProjectPaths
+
+    def _factory(
+        workspace_name="workspace",
+        run_name="character_v1",
+        steps=(100, 200),
+        with_eval=False,
+        with_images=False,
+        rank=8,
+    ):
+        paths = ProjectPaths.create(tmp_path / workspace_name)
+        production = paths.checkpoints_dir(run_name) / run_name
+        for step in steps:
+            make_lora_checkpoint(production / f"{run_name}_{step:09d}.safetensors", rank=rank)
+        inventory = inventory_from_directory(
+            production,
+            run_name,
+            max(steps),
+            "production",
+            {"status": "completed_process", "process_return_code": 0},
+        )
+        selection = select_active(inventory, mode="auto")
+        write_json_atomic(paths.active_checkpoint(run_name), selection)
+        write_json_atomic(
+            paths.run_manifest(run_name),
+            {
+                "run_name": run_name,
+                "project_name": "krea2_character_lora",
+                "trigger_word": "mycharacter",
+                "model_revision": "rawrev",
+                "vae_revision": "vaerev",
+                "source_revision": "sourcerev",
+                "training_config": {
+                    "lora_rank": rank,
+                    "lora_alpha": rank,
+                    "keep_tokens": 1,
+                    "shuffle_tokens": False,
+                    "token_dropout_rate": 0.0,
+                    "training_dtype": "bf16",
+                    "max_text_length": 512,
+                },
+                "checkpoint_inventory": inventory,
+                "active_checkpoint": selection,
+            },
+        )
+        (paths.logs / f"{run_name}_training.log").write_text("training log", encoding="utf-8")
+        write_json_atomic(
+            paths.training_asset_manifest,
+            {
+                "training_model": {"repository": "krea/Krea-2-Raw", "revision": "rawrev"},
+                "text_encoder": {"repository": "Qwen/Qwen3-VL-4B-Instruct", "revision": "terev"},
+                "vae": {
+                    "source_repository": "artsyww/KREA2REALVAE",
+                    "source_revision": "vaerev",
+                    "source_filename": "krea2RealVae_v10.safetensors",
+                    "source_sha256": "abc123",
+                },
+            },
+        )
+        if with_images:
+            image_root = paths.inference / run_name / "checkpoint_sweep"
+            image_root.mkdir(parents=True, exist_ok=True)
+            _write_solid_image(image_root / "case_01_base.png", (32, 32), (0, 0, 0))
+        if with_eval:
+            write_json_atomic(
+                paths.evaluation_manifest(run_name),
+                {
+                    "run_name": run_name,
+                    "prompts": ["mycharacter is a woman"],
+                    "seeds": [42],
+                    "inference_settings": {"width": 1024, "height": 1024},
+                    "scale_sweep": [1.0],
+                    "checkpoint_mode": "auto",
+                },
+            )
+        return paths, run_name
+
+    return _factory

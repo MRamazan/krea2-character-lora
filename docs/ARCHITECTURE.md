@@ -16,6 +16,12 @@ The pipeline returns durable report objects:
 - `TrainingRun`
 - `EvaluationReport`
 - `ExportBundle`
+- `ImportedRun`
+
+The pipeline also exposes `import_evaluation_bundle(zip_path=...)`, which returns an
+`ImportedRun` (a `TrainingRun` subclass) accepted directly by `evaluate(run=..., config=...)`.
+Bundle validation errors are `BundleValidationError`, `BundleImportError`,
+`UnsupportedBundleVersionError`, and `BundleIntegrityError`.
 
 ## Module responsibilities
 
@@ -65,7 +71,20 @@ Runs deterministic base comparisons, checkpoint sweeps, and scale sweeps while p
 
 ### `export.py`
 
-Packages the actual run state and returns downloadable archive records.
+Thin wrapper that packages the run into a portable evaluation bundle and preserves the
+backward-compatible `package_run` entry point.
+
+### `bundle.py`
+
+Creates the portable evaluation bundle and imports it: staging, hashing, capability
+detection, manifest normalization to relative POSIX paths, strict import validation, and
+reconstruction of the checkpoint inventory relative to the extraction root.
+
+### `secrets.py`
+
+Normalized exact-name and sensitive-suffix secret-field detection used by both bundle
+creation and bundle import. Legitimate fields such as `keep_tokens`, `shuffle_tokens`,
+and `token_dropout_rate` are accepted.
 
 ### `manifests.py`
 

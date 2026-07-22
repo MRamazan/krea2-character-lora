@@ -5,12 +5,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON_ROOTS = [ROOT / "src", ROOT / "scripts", ROOT / "tests"]
-NOTEBOOK_CELL_DIRECTORY = ROOT / "notebooks" / "cells"
+NOTEBOOK_CELL_DIRECTORIES = [
+    ROOT / "notebooks" / "cells",
+    ROOT / "notebooks" / "evaluation_cells",
+]
 ALLOWED_NOTEBOOK_TITLES = {
     "# Setup",
     "# Dataset",
     "# Training",
     "# Evaluation and export",
+    "# Upload and import evaluation bundle",
 }
 
 
@@ -35,12 +39,13 @@ def test_python_sources_contain_no_comments() -> None:
 
 def test_notebook_comments_are_section_separators() -> None:
     violations = {}
-    for path in NOTEBOOK_CELL_DIRECTORY.glob("*.py"):
-        invalid = [
-            value
-            for value in comment_tokens(path)
-            if not re.fullmatch(r"# ={20,}", value) and value not in ALLOWED_NOTEBOOK_TITLES
-        ]
-        if invalid:
-            violations[str(path.relative_to(ROOT))] = invalid
+    for directory in NOTEBOOK_CELL_DIRECTORIES:
+        for path in directory.glob("*.py"):
+            invalid = [
+                value
+                for value in comment_tokens(path)
+                if not re.fullmatch(r"# ={20,}", value) and value not in ALLOWED_NOTEBOOK_TITLES
+            ]
+            if invalid:
+                violations[str(path.relative_to(ROOT))] = invalid
     assert not violations
