@@ -11,8 +11,9 @@
 - Resolve and record exact source and model revisions.
 - Verify the active Krea 2 integration before training.
 - Prepare Krea 2 Raw and the text encoder for training.
-- Download the custom `artsyww/KREA2REALVAE` VAE, normalize it to a Diffusers-compatible `AutoencoderKLQwenImage` directory using the official `Qwen/Qwen-Image` configuration, validate its state dict strictly, and run an encode/decode smoke test.
-- Never fall back to another VAE when the custom VAE is incompatible; raise a precise error instead.
+- Download the custom `artsyww/KREA2REALVAE` VAE anonymously, detect its checkpoint namespace, convert the original Wan/Qwen-Image namespace to a Diffusers-compatible `AutoencoderKLQwenImage` directory using the official `Qwen/Qwen-Image` configuration, strictly load the converted state dict, and run an encode/decode smoke test.
+- Record the detected format, conversion, key mapping, and validation result in the asset manifest.
+- Never fall back to another VAE when the custom VAE is incompatible; raise a precise error that names the discovered file, detected format, key-mismatch summary, and validation log path instead.
 - Defer Krea 2 Turbo download until evaluation.
 
 ### Dataset

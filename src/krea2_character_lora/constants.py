@@ -12,6 +12,12 @@ VAE_CONFIG_SUBFOLDER = "vae"
 VAE_STATE_DICT_PREFIX = "vae."
 VAE_ARCHITECTURE = "AutoencoderKLQwenImage"
 
+VAE_FORMAT_DIFFUSERS = "diffusers_autoencoder_kl_qwen_image"
+VAE_FORMAT_ORIGINAL = "qwen_image_original_vae"
+VAE_FORMAT_UNKNOWN = "unknown"
+VAE_CONVERSION_IDENTITY = "identity"
+VAE_CONVERSION_ORIGINAL_TO_DIFFUSERS = "wan_qwen_original_to_diffusers"
+
 AI_TOOLKIT_REPOSITORY = "https://github.com/ostris/ai-toolkit.git"
 AI_TOOLKIT_REVISION = "main"
 VIRTUALENV_VERSION = "21.6.1"

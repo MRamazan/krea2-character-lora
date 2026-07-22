@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import struct
 import subprocess
@@ -18,6 +19,11 @@ from .constants import (
     VAE_ARCHITECTURE,
     VAE_CONFIG_REPOSITORY,
     VAE_CONFIG_SUBFOLDER,
+    VAE_CONVERSION_IDENTITY,
+    VAE_CONVERSION_ORIGINAL_TO_DIFFUSERS,
+    VAE_FORMAT_DIFFUSERS,
+    VAE_FORMAT_ORIGINAL,
+    VAE_FORMAT_UNKNOWN,
     VAE_STATE_DICT_PREFIX,
 )
 from .errors import AssetError, EnvironmentPreparationError, VaeValidationError
@@ -160,24 +166,88 @@ def analyze_state_dict(
     }
 
 
+_MID_BLOCK_MAP = {"0": "resnets.0", "1": "attentions.0", "2": "resnets.1"}
+
+
+def convert_original_vae_key(key: str) -> str:
+    k = key
+    if k.startswith("conv1."):
+        return "quant_conv." + k[len("conv1.") :]
+    if k.startswith("conv2."):
+        return "post_quant_conv." + k[len("conv2.") :]
+    k = re.sub(r"^encoder\.conv1\.", "encoder.conv_in.", k)
+    k = re.sub(r"^decoder\.conv1\.", "decoder.conv_in.", k)
+    k = k.replace("encoder.downsamples.", "encoder.down_blocks.")
+    match = re.match(r"decoder\.upsamples\.(\d+)\.(.*)", k)
+    if match is not None:
+        index = int(match.group(1))
+        rest = match.group(2)
+        block, position = divmod(index, 4)
+        if position < 3:
+            k = f"decoder.up_blocks.{block}.resnets.{position}.{rest}"
+        else:
+            k = f"decoder.up_blocks.{block}.upsamplers.0.{rest}"
+    k = re.sub(
+        r"(encoder|decoder)\.middle\.([012])\.",
+        lambda mo: f"{mo.group(1)}.mid_block.{_MID_BLOCK_MAP[mo.group(2)]}.",
+        k,
+    )
+    k = k.replace(".residual.0.", ".norm1.").replace(".residual.2.", ".conv1.")
+    k = k.replace(".residual.3.", ".norm2.").replace(".residual.6.", ".conv2.")
+    k = k.replace(".shortcut.", ".conv_shortcut.")
+    k = re.sub(r"\.head\.0\.", ".norm_out.", k)
+    k = re.sub(r"\.head\.2\.", ".conv_out.", k)
+    return k
+
+
+def detect_vae_format(keys: list[str]) -> str:
+    key_set = set(keys)
+    has_original = (
+        {"conv1.weight", "conv2.weight"} <= key_set
+        and any(name.startswith("encoder.downsamples.") for name in key_set)
+        and any(name.startswith("decoder.upsamples.") for name in key_set)
+    )
+    if has_original:
+        return VAE_FORMAT_ORIGINAL
+    has_diffusers = bool({"quant_conv.weight", "post_quant_conv.weight"} & key_set) or any(
+        name.startswith("encoder.down_blocks.") for name in key_set
+    )
+    if has_diffusers:
+        return VAE_FORMAT_DIFFUSERS
+    return VAE_FORMAT_UNKNOWN
+
+
 def plan_vae_normalization(
     custom_shapes: dict[str, list[int]],
     reference_shapes: dict[str, list[int]],
     prefix: str = VAE_STATE_DICT_PREFIX,
 ) -> dict[str, Any]:
-    reference_keys = list(reference_shapes)
-    remove_prefix = detect_removable_prefix(list(custom_shapes), reference_keys, prefix)
-    normalized = normalize_keys(custom_shapes, remove_prefix, prefix)
-    analysis = analyze_state_dict(normalized, reference_shapes)
+    remove_prefix = detect_removable_prefix(list(custom_shapes), list(reference_shapes), prefix)
+    stripped = normalize_keys(custom_shapes, remove_prefix, prefix)
+    detected_format = detect_vae_format(list(stripped))
+    if detected_format == VAE_FORMAT_ORIGINAL:
+        conversion = VAE_CONVERSION_ORIGINAL_TO_DIFFUSERS
+        key_mapping = {name: convert_original_vae_key(name) for name in stripped}
+    else:
+        conversion = VAE_CONVERSION_IDENTITY
+        key_mapping = {name: name for name in stripped}
+    converted = {key_mapping[name]: shape for name, shape in stripped.items()}
+    analysis = analyze_state_dict(converted, reference_shapes)
     compatible = (
-        not analysis["missing_keys"]
+        detected_format != VAE_FORMAT_UNKNOWN
+        and len(converted) == len(stripped)
+        and not analysis["missing_keys"]
         and not analysis["unexpected_keys"]
         and not analysis["shape_mismatches"]
     )
     return {
         "remove_prefix": remove_prefix,
         "prefix": prefix,
-        "normalized_key_count": len(normalized),
+        "detected_format": detected_format,
+        "conversion": conversion,
+        "stripped_key_count": len(stripped),
+        "converted_key_count": len(converted),
+        "key_mapping": key_mapping,
         "analysis": analysis,
         "compatible": compatible,
     }
@@ -237,14 +307,19 @@ def prepare_custom_vae(paths: ProjectPaths) -> dict[str, Any]:
             },
         )
         raise VaeValidationError(
-            "The custom VAE is incompatible with "
-            f"{VAE_ARCHITECTURE}. Discovered file: {selected_name}. "
+            f"The custom VAE is incompatible with {VAE_ARCHITECTURE}. "
+            f"Discovered file: {selected_name}. Detected format: {plan['detected_format']}. "
             f"Missing keys: {plan['analysis']['missing_keys'][:5]}. "
             f"Unexpected keys: {plan['analysis']['unexpected_keys'][:5]}. "
             f"Shape mismatches: {plan['analysis']['shape_mismatches'][:5]}. "
             f"Validation log: {log_path}"
         )
 
+    source_to_diffusers = _build_source_mapping(custom_shapes, plan)
+    key_mapping_path = normalized_directory / "vae_key_mapping.json"
+    write_json_atomic(
+        key_mapping_path, {"conversion": plan["conversion"], "mapping": source_to_diffusers}
+    )
     shutil.copy2(reference_config, normalized_directory / "config.json")
     manifest = {
         "architecture": VAE_ARCHITECTURE,
@@ -257,14 +332,34 @@ def prepare_custom_vae(paths: ProjectPaths) -> dict[str, Any]:
         "config_source_revision": config_revision,
         "config_source_subfolder": VAE_CONFIG_SUBFOLDER,
         "normalized_directory": str(normalized_directory),
+        "detected_format": plan["detected_format"],
+        "conversion": plan["conversion"],
         "remove_prefix": plan["remove_prefix"],
         "prefix": plan["prefix"],
+        "source_tensor_count": len(custom_shapes),
+        "converted_key_count": plan["converted_key_count"],
+        "key_mapping_path": str(key_mapping_path),
         "key_analysis": plan["analysis"],
         "static_compatibility": plan["compatible"],
         "strict_validation": "pending",
     }
     write_json_atomic(normalized_directory / "vae_normalization_manifest.json", manifest)
     return manifest
+
+
+def _build_source_mapping(
+    custom_shapes: dict[str, list[int]], plan: dict[str, Any]
+) -> dict[str, str]:
+    prefix = plan["prefix"]
+    remove_prefix = plan["remove_prefix"]
+    stripped_mapping = plan["key_mapping"]
+    mapping: dict[str, str] = {}
+    for raw_key in custom_shapes:
+        stripped = (
+            raw_key[len(prefix) :] if remove_prefix and raw_key.startswith(prefix) else raw_key
+        )
+        mapping[raw_key] = stripped_mapping[stripped]
+    return mapping
 
 
 def strict_validate_vae(paths: ProjectPaths, vae_manifest: dict[str, Any]) -> dict[str, Any]:
@@ -278,8 +373,8 @@ def strict_validate_vae(paths: ProjectPaths, vae_manifest: dict[str, Any]) -> di
     environment["KREA2_VAE_SOURCE"] = vae_manifest["source_path"]
     environment["KREA2_VAE_DIRECTORY"] = str(normalized_directory)
     environment["KREA2_VAE_RESULT"] = str(result_path)
-    environment["KREA2_VAE_REMOVE_PREFIX"] = "1" if vae_manifest["remove_prefix"] else "0"
-    environment["KREA2_VAE_PREFIX"] = vae_manifest["prefix"]
+    environment["KREA2_VAE_KEY_MAPPING"] = vae_manifest["key_mapping_path"]
+    environment["KREA2_VAE_CONVERSION"] = vae_manifest["conversion"]
     environment["PYTHONUNBUFFERED"] = "1"
     result = subprocess.run(
         [str(paths.venv_python), str(isolated_script("validate_vae.py"))],
