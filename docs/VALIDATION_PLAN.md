@@ -21,7 +21,7 @@ Local tests must cover:
 - Trigger ownership by the dataset cell
 - Absence of all Hugging Face token handling
 - Anonymous asset download calls
-- Custom VAE file discovery, normalized layout, and strict rejection of incompatible weights
+- Default `Qwen/Qwen-Image` VAE preparation and manifest recording
 - Dataset manifest round trips
 - Run manifest round trips
 - Nested dataset pair discovery

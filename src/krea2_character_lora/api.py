@@ -51,8 +51,8 @@ class CharacterLoraPipeline:
             details["training_assets"] = {
                 "training_model_revision": training_manifest["training_model"]["revision"],
                 "vae": {
-                    "source_repository": training_manifest["vae"]["source_repository"],
-                    "source_revision": training_manifest["vae"]["source_revision"],
+                    "repository": training_manifest["vae"]["repository"],
+                    "revision": training_manifest["vae"]["revision"],
                     "strict_validation": training_manifest["vae"]["strict_validation"],
                 },
             }

@@ -140,7 +140,7 @@ def test_bundle_manifest_records_provenance(prepared_run):
     _, manifest, _ = _read_bundle(export.archives[0])
     provenance = manifest["provenance"]
     assert provenance["training_model"]["repository"] == "krea/Krea-2-Raw"
-    assert provenance["vae"]["repository"] == "artsyww/KREA2REALVAE"
-    assert provenance["vae"]["source_filename"] == "krea2RealVae_v10.safetensors"
+    assert provenance["vae"]["repository"] == "Qwen/Qwen-Image"
+    assert provenance["vae"]["weights_filename"] == "diffusion_pytorch_model.safetensors"
     assert len(provenance["selected_lora_sha256"]) == 64
     assert manifest["lora_rank"] == 8

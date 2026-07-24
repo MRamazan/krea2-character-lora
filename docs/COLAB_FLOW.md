@@ -8,7 +8,7 @@ The user edits:
 - `PIPELINE_REVISION`
 - `WORKSPACE`
 
-The cell installs the package, initializes the pipeline, installs or repairs the isolated runtime, verifies source compatibility, and prepares the training assets, including the normalized and strictly validated custom VAE. It uses no Hugging Face token; every repository is downloaded anonymously.
+The cell installs the package, initializes the pipeline, installs or repairs the isolated runtime, verifies source compatibility, and prepares the training assets, including Krea 2's default `Qwen/Qwen-Image` VAE. It uses no Hugging Face token; every repository is downloaded anonymously.
 
 ## Cell 2: Dataset
 
@@ -66,7 +66,7 @@ Face token. Krea 2 Turbo, the text encoder, and the VAE are prepared in cell thr
 Uploads exactly one portable ZIP and calls `pipeline.import_evaluation_bundle(zip_path=...)`.
 `imported_run.display_summary()` shows the run name, trigger word, selected checkpoint
 step, available checkpoint steps, LoRA rank and alpha, bundle format version, training
-model and custom VAE provenance, the selected LoRA path and SHA-256, checkpoint-sweep
+model and VAE provenance, the selected LoRA path and SHA-256, checkpoint-sweep
 support, and the extraction directory.
 
 ### Cell 3: Evaluation and export

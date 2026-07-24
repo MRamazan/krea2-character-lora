@@ -69,10 +69,10 @@ The bundle stores relative POSIX paths and a root `bundle_manifest.json`:
     "evaluation_model": {"repository": "krea/Krea-2-Turbo", "revision": "..."},
     "text_encoder": {"repository": "Qwen/Qwen3-VL-4B-Instruct", "revision": "..."},
     "vae": {
-      "repository": "artsyww/KREA2REALVAE",
+      "repository": "Qwen/Qwen-Image",
       "revision": "...",
-      "source_filename": "krea2RealVae_v10.safetensors",
-      "source_sha256": "..."
+      "weights_filename": "diffusion_pytorch_model.safetensors",
+      "weights_sha256": "..."
     },
     "selected_lora_sha256": "..."
   },

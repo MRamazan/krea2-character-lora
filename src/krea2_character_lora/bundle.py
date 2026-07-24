@@ -15,7 +15,6 @@ from .constants import (
     BUNDLE_FORMAT_VERSION,
     BUNDLE_MANIFEST_NAME,
     BUNDLE_TYPE,
-    CUSTOM_VAE_REPOSITORY,
     FALLBACK_PACKAGE_VERSION,
     INFERENCE_MODEL_REPOSITORY,
     MAX_BUNDLE_FILES,
@@ -24,6 +23,7 @@ from .constants import (
     PACKAGE_DISTRIBUTION,
     TEXT_ENCODER_REPOSITORY,
     TRAINING_MODEL_REPOSITORY,
+    VAE_REPOSITORY,
 )
 from .errors import (
     BundleValidationError,
@@ -135,10 +135,10 @@ def _build_provenance(
             "revision": training.get("text_encoder", {}).get("revision"),
         },
         "vae": {
-            "repository": CUSTOM_VAE_REPOSITORY,
-            "revision": run_manifest.get("vae_revision") or vae.get("source_revision"),
-            "source_filename": vae.get("source_filename"),
-            "source_sha256": vae.get("source_sha256"),
+            "repository": VAE_REPOSITORY,
+            "revision": run_manifest.get("vae_revision") or vae.get("revision"),
+            "weights_filename": vae.get("weights_filename"),
+            "weights_sha256": vae.get("weights_sha256"),
         },
         "selected_lora_sha256": selected_sha256,
     }

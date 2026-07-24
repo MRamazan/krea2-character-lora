@@ -145,10 +145,11 @@ def prepared_run(tmp_path, make_lora_checkpoint):
                 "training_model": {"repository": "krea/Krea-2-Raw", "revision": "rawrev"},
                 "text_encoder": {"repository": "Qwen/Qwen3-VL-4B-Instruct", "revision": "terev"},
                 "vae": {
-                    "source_repository": "artsyww/KREA2REALVAE",
-                    "source_revision": "vaerev",
-                    "source_filename": "krea2RealVae_v10.safetensors",
-                    "source_sha256": "abc123",
+                    "repository": "Qwen/Qwen-Image",
+                    "revision": "vaerev",
+                    "subfolder": "vae",
+                    "weights_filename": "diffusion_pytorch_model.safetensors",
+                    "weights_sha256": "abc123",
                 },
             },
         )

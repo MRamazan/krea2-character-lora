@@ -30,7 +30,7 @@ The generated notebook must contain exactly four executable code cells and no ad
 3. Training
 4. Evaluation
 
-The setup cell must visibly define the GitHub repository URL and revision, install the package, initialize the pipeline, install and verify the isolated AI Toolkit environment, and prepare the training assets, including the normalized and strictly validated custom VAE. The pipeline uses no Hugging Face authentication; every configured repository is public and downloaded anonymously.
+The setup cell must visibly define the GitHub repository URL and revision, install the package, initialize the pipeline, install and verify the isolated AI Toolkit environment, and prepare the training assets, including Krea 2's default `Qwen/Qwen-Image` VAE. The pipeline uses no Hugging Face authentication; every configured repository is public and downloaded anonymously.
 
 The dataset cell must visibly define `TRIGGER_WORD`, upload exactly one ZIP file, create the dataset configuration, validate image-caption pairs, audit trigger usage, audit duplicates, display a summary, display every image with its caption, and display detected issues.
 

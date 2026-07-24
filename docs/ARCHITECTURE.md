@@ -43,11 +43,11 @@ Verifies Colab hardware, installs or repairs the isolated environment, resolves 
 
 ### `assets.py`
 
-Resolves and anonymously downloads training and inference assets, hashes and records them, and normalizes plus strictly validates the custom `AutoencoderKLQwenImage` VAE without any fallback.
+Resolves and anonymously downloads training and inference assets, hashes and records them, and prepares Krea 2's default `Qwen/Qwen-Image` `AutoencoderKLQwenImage` VAE with an encode/decode smoke test.
 
 ### `isolated/`
 
-Self-contained scripts executed by the isolated AI Toolkit interpreter for GPU-bound work: source preflight, custom VAE strict validation, the non-destructive Krea 2 runtime helper, and the base, checkpoint, and scale evaluation passes. These modules are never imported by the outer package.
+Self-contained scripts executed by the isolated AI Toolkit interpreter for GPU-bound work: source preflight, default VAE encode/decode smoke validation, the non-destructive Krea 2 runtime helper, and the base, checkpoint, and scale evaluation passes. These modules are never imported by the outer package.
 
 ### `dataset.py`
 

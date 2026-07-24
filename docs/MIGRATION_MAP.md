@@ -8,7 +8,7 @@
 | Krea 2 implementation verification | `environment.py` |
 | Hugging Face authentication | removed entirely; all downloads are anonymous |
 | Training asset resolution | `assets.py` |
-| Custom VAE normalization and strict validation | `assets.py`, `isolated/validate_vae.py` |
+| Default Qwen-Image VAE preparation and smoke validation | `assets.py`, `isolated/validate_vae.py` |
 | Dataset ZIP upload | dataset notebook cell |
 | Pair extraction and validation | `dataset.py` |
 | Trigger audit | `dataset.py` |

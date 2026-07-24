@@ -55,9 +55,6 @@ src/krea2_character_lora/isolated/evaluate_base.py
 src/krea2_character_lora/isolated/evaluate_checkpoint_sweep.py
 src/krea2_character_lora/isolated/evaluate_scale_sweep.py
 tests/conftest.py
-tests/data/krea2realvae_original_namespace.json
-tests/data/qwen_image_diffusers_namespace.json
-tests/test_assets_vae.py
 tests/test_bundle_create.py
 tests/test_bundle_eval.py
 tests/test_bundle_import.py
@@ -74,3 +71,4 @@ tests/test_secret_detector.py
 tests/test_source_policy.py
 tests/test_state_contract.py
 tests/test_training.py
+tests/test_vae.py

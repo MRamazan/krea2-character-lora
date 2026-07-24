@@ -47,11 +47,11 @@ Bundles exported with `include_all_checkpoints=True` support the full checkpoint
 
 The package does not expose a concept type, style mode, object mode, product mode, or generic training mode. Character LoRA training is the only supported workflow. The trigger word is defined in the dataset cell and persisted in dataset and run manifests.
 
-## Anonymous downloads and custom VAE
+## Anonymous downloads and default VAE
 
 Every Hugging Face repository used by the pipeline is public and downloaded anonymously. There is no Hugging Face token, `getpass` prompt, Colab Secrets integration, or `.env` support anywhere in the package or notebook.
 
-The default VAE is `artsyww/KREA2REALVAE`. Its published checkpoint (`krea2RealVae_v10.safetensors`) is a complete VAE stored in the original upstream Wan/Qwen-Image key namespace (`conv1`/`conv2`, `encoder.downsamples`, `decoder.upsamples`, RMS-norm `gamma`), not the Diffusers namespace. During setup the pipeline downloads it anonymously, inspects the safetensors header, detects the namespace, applies a deterministic and provably bijective conversion to the Diffusers `AutoencoderKLQwenImage` layout (using the official `Qwen/Qwen-Image` configuration), strictly loads the converted state dict with `AutoencoderKLQwenImage` (rejecting any missing, unexpected, or shape-mismatched key), and runs an encode/decode smoke test. The detected format, conversion, exact key mapping, and validation result are recorded in the VAE manifest. The pipeline never silently falls back to another VAE. The external VAE weights are neither committed to this repository nor included in export archives; review the upstream license before redistributing.
+The pipeline uses Krea 2's default VAE, the official `Qwen/Qwen-Image` `vae/` subfolder, which is already a Diffusers-format `AutoencoderKLQwenImage` directory. During setup the pipeline resolves the exact repository revision, downloads the `vae/` snapshot anonymously, uses it directly as the VAE directory for latent caching, training, samples, and evaluation, and runs an encode/decode smoke test through `AutoencoderKLQwenImage`. The repository, resolved revision, weights filename, SHA-256, and validation result are recorded in the asset manifest. VAE weights are not committed to this repository or included in export archives.
 
 ## Local development
 

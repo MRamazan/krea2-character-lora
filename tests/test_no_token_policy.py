@@ -41,4 +41,4 @@ def test_downloads_pass_token_none() -> None:
     assets_source = (ROOT / "src" / "krea2_character_lora" / "assets.py").read_text(
         encoding="utf-8"
     )
-    assert assets_source.count("token=None") >= 4
+    assert assets_source.count("token=None") >= 3
